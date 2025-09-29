@@ -3,7 +3,9 @@ package com.scottlogic.ecommercebackend.api.controller.auth;
 import com.scottlogic.ecommercebackend.api.model.LoginBody;
 import com.scottlogic.ecommercebackend.api.model.LoginResponse;
 import com.scottlogic.ecommercebackend.api.model.RegistrationBody;
+import com.scottlogic.ecommercebackend.exception.EmailFailureException;
 import com.scottlogic.ecommercebackend.exception.UserAlreadyExistsException;
+import com.scottlogic.ecommercebackend.exception.UserNotVerifiedException;
 import com.scottlogic.ecommercebackend.model.LocalUser;
 import com.scottlogic.ecommercebackend.service.UserService;
 import jakarta.validation.Valid;
@@ -26,19 +28,36 @@ public class AuthenticationController {
         try {
             userService.registerUser(registrationBody);
             return ResponseEntity.ok().build();
-        } catch (UserAlreadyExistsException e) {
+        } catch (UserAlreadyExistsException ex) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        } catch (EmailFailureException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> loginUser(@Valid @RequestBody LoginBody loginBody){
-        String jwt = userService.loginUser(loginBody);
+        String jwt = null;
+        try {
+            jwt = userService.loginUser(loginBody);
+        } catch (UserNotVerifiedException ex) {
+            LoginResponse response = new LoginResponse();
+            response.setSuccess(false);
+            String reason = "USER_NOT_VERIFIED";
+            if (ex.isNewEmailSent()){
+                reason+="_EMAIL_SENT";
+            }
+            response.setFailureReason(reason);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        } catch (EmailFailureException ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
         if (jwt == null){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         } else {
             LoginResponse response = new LoginResponse();
             response.setJwt(jwt);
+            response.setSuccess(true);
             return ResponseEntity.ok(response);
         }
     }
