@@ -41,7 +41,6 @@ public class UserService {
         user.setPassword(encryptionService.encryptPassword(registrationBody.getPassword()));
         VerificationToken verificationToken = createVerificationToken(user);
         emailService.sendVerificationEmail(verificationToken);
-        verificationTokenDAO.save(verificationToken);
         return localUserDAO.save(user);
     }
 
