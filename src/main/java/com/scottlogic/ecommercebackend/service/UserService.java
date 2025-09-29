@@ -9,6 +9,7 @@ import com.scottlogic.ecommercebackend.model.LocalUser;
 import com.scottlogic.ecommercebackend.model.VerificationToken;
 import com.scottlogic.ecommercebackend.model.dao.LocalUserDAO;
 import com.scottlogic.ecommercebackend.model.dao.VerificationTokenDAO;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -77,4 +78,21 @@ public class UserService {
         }
         return null;
     }
+
+    @Transactional
+    public boolean verifyUser(String token){
+        Optional<VerificationToken> opToken = verificationTokenDAO.findByToken(token);
+        if (opToken.isPresent()){
+            VerificationToken verificationToken = opToken.get();
+            LocalUser user = verificationToken.getUser();
+            if(!user.isEmailVerified()){
+                user.setEmailVerified(true);
+                localUserDAO.save(user);
+                verificationTokenDAO.deleteByUser(user);
+                return true;
+            }
+        }
+        return false;
+    }
+
 }
