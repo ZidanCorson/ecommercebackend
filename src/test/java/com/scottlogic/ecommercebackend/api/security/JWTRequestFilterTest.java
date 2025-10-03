@@ -53,6 +53,4 @@ public class JWTRequestFilterTest {
                 .andExpect(status().is(HttpStatus.OK.value()));
     }
 
-
-
 }
