@@ -27,12 +27,22 @@ public class OrderControllerTest {
     @Test
     @WithUserDetails("UserA")
     public void testUserAAunthenticatedOrderList() throws Exception {
+        testAuthenticatedListBelongsToUser("UserA");
+    }
+
+    @Test
+    @WithUserDetails("UserB")
+    public void testUserBAunthenticatedOrderList() throws Exception {
+        testAuthenticatedListBelongsToUser("UserB");
+    }
+
+    private void testAuthenticatedListBelongsToUser(String username) throws Exception {
         mvc.perform(get("/order")).andExpect(status().is(HttpStatus.OK.value()))
                 .andExpect(result -> {
                     String json = result.getResponse().getContentAsString();
                     List<WebOrder> orders = new ObjectMapper().readValue(json, new TypeReference<List<WebOrder>>() {});
                     for (WebOrder order : orders){
-                        Assertions.assertEquals("UserA", order.getUser().getUsername(), "Order list should only be orders belonging to the user.");
+                        Assertions.assertEquals(username, order.getUser().getUsername(), "Order list should only be orders belonging to the user.");
                     }
                 });
     }
@@ -40,8 +50,6 @@ public class OrderControllerTest {
     @Test
     public void testUnauthenticatedOrderList() throws Exception {
         mvc.perform(get("/order")).andExpect(status().is(HttpStatus.FORBIDDEN.value()));
-
-
     }
 
 }
