@@ -1,6 +1,7 @@
 package com.scottlogic.ecommercebackend.service;
 
 import com.scottlogic.ecommercebackend.exception.EmailFailureException;
+import com.scottlogic.ecommercebackend.model.LocalUser;
 import com.scottlogic.ecommercebackend.model.VerificationToken;
 import jakarta.validation.Valid;
 import org.hibernate.query.sql.internal.ParameterRecognizerImpl;
@@ -40,6 +41,20 @@ public class EmailService {
         message.setText("Please follow the link below to verify your email to activate your account. \n" +
                 url + "/auth/verify?token=" + verificationToken.getToken());
         try{
+            javaMailSender.send(message);
+        } catch (MailException ex){
+            throw new EmailFailureException();
+        }
+    }
+
+    public void sendPasswordResetEmail(LocalUser user, String token) throws EmailFailureException {
+        SimpleMailMessage message = makeMailMessage();
+        message.setTo(user.getEmail());
+        message.setSubject("Your password reset request link.");
+        message.setText("You requested a password reset on our website. Please " +
+                "find the link below to be able to reset your password. \n" + url +
+                "/auth/reset?token=" + token);
+        try {
             javaMailSender.send(message);
         } catch (MailException ex){
             throw new EmailFailureException();

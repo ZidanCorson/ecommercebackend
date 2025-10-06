@@ -2,8 +2,10 @@ package com.scottlogic.ecommercebackend.api.controller.auth;
 
 import com.scottlogic.ecommercebackend.api.model.LoginBody;
 import com.scottlogic.ecommercebackend.api.model.LoginResponse;
+import com.scottlogic.ecommercebackend.api.model.PasswordResetBody;
 import com.scottlogic.ecommercebackend.api.model.RegistrationBody;
 import com.scottlogic.ecommercebackend.exception.EmailFailureException;
+import com.scottlogic.ecommercebackend.exception.EmailNotFoundException;
 import com.scottlogic.ecommercebackend.exception.UserAlreadyExistsException;
 import com.scottlogic.ecommercebackend.exception.UserNotVerifiedException;
 import com.scottlogic.ecommercebackend.model.LocalUser;
@@ -73,6 +75,24 @@ public class AuthenticationController {
     @GetMapping("/me")
     public LocalUser getLoggedInUserProfile(@AuthenticationPrincipal LocalUser user){
         return user;
+    }
+
+    @PostMapping("/forgot")
+    public ResponseEntity forgotPassword(@RequestParam String email) {
+        try {
+            userService.forgotPassword(email);
+            return ResponseEntity.ok().build();
+        } catch (EmailNotFoundException ex){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (EmailFailureException e){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/reset")
+    public ResponseEntity resetPassword(@Valid @RequestBody PasswordResetBody body){
+        userService.resetPassword(body);
+        return ResponseEntity.ok().build();
     }
 
 }

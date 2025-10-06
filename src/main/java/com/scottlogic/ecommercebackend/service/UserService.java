@@ -1,8 +1,10 @@
 package com.scottlogic.ecommercebackend.service;
 
 import com.scottlogic.ecommercebackend.api.model.LoginBody;
+import com.scottlogic.ecommercebackend.api.model.PasswordResetBody;
 import com.scottlogic.ecommercebackend.api.model.RegistrationBody;
 import com.scottlogic.ecommercebackend.exception.EmailFailureException;
+import com.scottlogic.ecommercebackend.exception.EmailNotFoundException;
 import com.scottlogic.ecommercebackend.exception.UserAlreadyExistsException;
 import com.scottlogic.ecommercebackend.exception.UserNotVerifiedException;
 import com.scottlogic.ecommercebackend.model.LocalUser;
@@ -93,6 +95,27 @@ public class UserService {
             }
         }
         return false;
+    }
+
+    public void forgotPassword(String email) throws EmailNotFoundException, EmailFailureException {
+        Optional<LocalUser> opUser = localUserDAO.findByEmailIgnoreCase(email);
+        if (opUser.isPresent()){
+            LocalUser user = opUser.get();
+            String token = jwtService.generatePasswordResetJWT(user);
+            emailService.sendPasswordResetEmail(user, token);
+        } else {
+            throw new EmailNotFoundException();
+        }
+    }
+
+    public void resetPassword(PasswordResetBody body){
+        String email = jwtService.getResetPasswordEmail(body.getToken());
+        Optional<LocalUser> opUser = localUserDAO.findByEmailIgnoreCase(email);
+        if (opUser.isPresent()){
+            LocalUser user = opUser.get();
+            user.setPassword(encryptionService.encryptPassword(body.getPassword()));
+            localUserDAO.save(user);
+        }
     }
 
 }
