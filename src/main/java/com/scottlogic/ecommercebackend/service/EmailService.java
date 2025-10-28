@@ -3,15 +3,11 @@ package com.scottlogic.ecommercebackend.service;
 import com.scottlogic.ecommercebackend.exception.EmailFailureException;
 import com.scottlogic.ecommercebackend.model.LocalUser;
 import com.scottlogic.ecommercebackend.model.VerificationToken;
-import jakarta.validation.Valid;
-import org.hibernate.query.sql.internal.ParameterRecognizerImpl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
-
-import java.security.PrivilegedAction;
 
 @Service
 public class EmailService {
@@ -60,5 +56,4 @@ public class EmailService {
             throw new EmailFailureException();
         }
     }
-
 }
