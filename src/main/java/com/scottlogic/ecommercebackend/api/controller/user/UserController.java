@@ -1,10 +1,13 @@
 package com.scottlogic.ecommercebackend.api.controller.user;
 
+import com.scottlogic.ecommercebackend.api.model.DataChange;
 import com.scottlogic.ecommercebackend.model.Address;
 import com.scottlogic.ecommercebackend.model.LocalUser;
 import com.scottlogic.ecommercebackend.model.dao.AddressDAO;
+import com.scottlogic.ecommercebackend.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,16 +18,20 @@ import java.util.Optional;
 @RequestMapping("/user")
 public class UserController {
     private AddressDAO addressDAO;
+    private SimpMessagingTemplate simpMessagingTemplate;
+    private UserService userService;
 
-    public UserController(AddressDAO addressDAO) {
+    public UserController(AddressDAO addressDAO, SimpMessagingTemplate simpMessagingTemplate, UserService userService) {
         this.addressDAO = addressDAO;
+        this.simpMessagingTemplate = simpMessagingTemplate;
+        this.userService = userService;
     }
 
     @GetMapping("/{userId}/address")
     public ResponseEntity<List<Address>> getAddress(
             @AuthenticationPrincipal LocalUser user,
             @PathVariable Long userId){
-        if (!userHasPermission(user, userId)) {
+        if (!userService.userHasPermissionToUser(user, userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         return ResponseEntity.ok(addressDAO.findByUser_Id(userId));
@@ -34,14 +41,17 @@ public class UserController {
     public ResponseEntity<Address> putAddress(
             @AuthenticationPrincipal LocalUser user, @PathVariable Long userId,
             @RequestBody Address address){
-        if (!userHasPermission(user, userId)) {
+        if (!userService.userHasPermissionToUser(user, userId)) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
         address.setId(null);
         LocalUser refUser = new LocalUser();
         refUser.setId(userId);
         address.setUser(refUser);
-        return ResponseEntity.ok(addressDAO.save(address));
+        Address savedAddress = addressDAO.save(address);
+        simpMessagingTemplate.convertAndSend("/topic/user/" + userId + "/address",
+                new DataChange<>(DataChange.ChangeType.INSERT, address));
+        return ResponseEntity.ok(savedAddress);
     }
 
     @PatchMapping("/{userId}/address/{addressId}")
@@ -49,7 +59,7 @@ public class UserController {
             @AuthenticationPrincipal LocalUser user, @PathVariable Long userId,
             @PathVariable Long addressId, @RequestBody Address address
     ){
-        if (!userHasPermission(user, userId)) {
+        if (!userService.userHasPermissionToUser(user, userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         if (address.getId() == addressId){
@@ -58,15 +68,14 @@ public class UserController {
                 LocalUser originalUser = opOriginalAddress.get().getUser();
                 if (originalUser.getId() == userId){
                     address.setUser(originalUser);
-                    return ResponseEntity.ok(addressDAO.save(address));
+                    Address savedAddress = addressDAO.save(address);
+                    simpMessagingTemplate.convertAndSend("/topic/user/" + userId + "/address",
+                            new DataChange<>(DataChange.ChangeType.UPDATE, address));
+                    return ResponseEntity.ok(savedAddress);
                 }
             }
         }
         return ResponseEntity.badRequest().build();
-
     }
 
-    private boolean userHasPermission(LocalUser user, Long id){
-        return user.getId() == id;
-    }
 }
