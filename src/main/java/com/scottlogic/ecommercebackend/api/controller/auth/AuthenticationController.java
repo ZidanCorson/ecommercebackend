@@ -94,5 +94,4 @@ public class AuthenticationController {
         userService.resetPassword(body);
         return ResponseEntity.ok().build();
     }
-
 }
