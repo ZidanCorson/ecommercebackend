@@ -62,5 +62,4 @@ public class JWTService {
         DecodedJWT jwt = JWT.require(algorithm).withIssuer(issuer).build().verify(token);
         return jwt.getClaim(USERNAME_KEY).asString();
     }
-
 }
